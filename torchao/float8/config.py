@@ -11,7 +11,7 @@ from typing import Optional, Union
 
 import torch
 
-from torchao.utils import is_MI300
+from torchao.utils import is_gaudi2, is_MI300
 
 logger: logging.Logger = logging.getLogger()
 
@@ -259,7 +259,7 @@ class Float8LinearConfig:
             (cc_i_gw, cc_go_gw, "grad_weight"),
         ):
             is_disabled_1 = cc1.scaling_type is ScalingType.DISABLED
-            is_disabled_2 = cc1.scaling_type is ScalingType.DISABLED
+            is_disabled_2 = cc2.scaling_type is ScalingType.DISABLED
             assert is_disabled_1 == is_disabled_2, (
                 f"incompatible operand precision for {gemm_name}"
             )
@@ -277,6 +277,14 @@ class Float8LinearConfig:
             assert cc1.target_dtype == cc2.target_dtype, (
                 f"{operand_name} must be cast to the same dtype in both matmuls it's used in"
             )
+
+        if is_gaudi2():
+            if cc_w.target_dtype != cc_i.target_dtype:
+                object.__setattr__(cc_w, "target_dtype", cc_i.target_dtype)
+                object.__setattr__(cc_w_gi, "target_dtype", cc_i.target_dtype)
+            if cc_go.target_dtype != cc_w.target_dtype:
+                object.__setattr__(cc_go, "target_dtype", cc_w.target_dtype)
+                object.__setattr__(cc_go_gw, "target_dtype", cc_w.target_dtype)
 
         # See the comments around `force_recompute_fp8_weight_in_bwd` for more details of this warning.
         if (
