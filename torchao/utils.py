@@ -710,3 +710,60 @@ def is_package_at_least(package_name: str, min_version: str):
         return False
 
     return version(package_name) >= min_version
+
+
+try:
+    HPU_DEVICE_NAME = torch.hpu.get_device_name()
+    CURRENT_ACCL_TYPE = torch.accelerator.current_accelerator().type
+except:
+    HPU_DEVICE_NAME = "NONE"
+    CURRENT_ACCL_TYPE = "cpu"
+
+
+def get_device():
+    """
+    Get actual device
+    """
+    return CURRENT_ACCL_TYPE
+
+
+def get_backend():
+    """
+    Get device specific backend
+    """
+    if CURRENT_ACCL_TYPE == "hpu":
+        return "hpu_backend"
+    else:
+        return "inductor"
+
+
+def get_dist_backend():
+    """
+    Get device specific backend for distributed communication
+    """
+    if CURRENT_ACCL_TYPE == "hpu":
+        return "hccl"
+    else:
+        return "nccl"
+
+
+def is_gaudi(name: str | list[str]):
+    if CURRENT_ACCL_TYPE == "hpu":
+        if isinstance(name, list):
+            return HPU_DEVICE_NAME in name
+        else:
+            return HPU_DEVICE_NAME == name
+    else:
+        return False
+
+
+def is_gaudi2():
+    return is_gaudi("GAUDI2")
+
+
+def is_gaudi2_at_least():
+    return is_gaudi(["GAUDI2", "GAUDI3"])
+
+
+def is_gaudi3():
+    return is_gaudi("GAUDI3")
