@@ -8,8 +8,8 @@
 # terminate script on first error
 set -e
 
-if python -c 'import torch;print(torch.cuda.is_available())' | grep -q "False"; then
-    echo "Skipping test_dtensor.sh because no CUDA devices are available."
+if python -c 'import torch;print(torch.accelerator.is_available())' | grep -q "False"; then
+    echo "Skipping test_dtensor.sh because no Accelerator devices are available."
     exit
 fi
 
