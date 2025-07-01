@@ -761,7 +761,7 @@ def is_gaudi2():
     return is_gaudi("GAUDI2")
 
 
-def is_gaudi2_at_least():
+def is_gaudi2_or_gaudi3():
     return is_gaudi(["GAUDI2", "GAUDI3"])
 
 
