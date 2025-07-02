@@ -11,6 +11,7 @@ import torch.distributed as dist
 from torch.distributed._functional_collectives import AsyncCollectiveTensor, all_reduce
 
 from torchao.float8.config import ScalingGranularity
+from torchao.utils import is_gaudi2
 
 # Helpful visualizer for debugging (only supports fp32):
 # https://www.h-schmidt.net/FloatConverter/IEEE754.html
@@ -44,7 +45,10 @@ def amax_to_scale(
     # upcast to float64 to ensure same numeric between compile and eager
     amax = amax.to(torch.float64)
     if float8_dtype in FP8_TYPES:
-        res = torch.finfo(float8_dtype).max / torch.clamp(amax, min=EPS)
+        float8_max_pos = torch.finfo(float8_dtype).max
+        if float8_dtype == torch.float8_e4m3fn and is_gaudi2():
+            float8_max_pos = torch.finfo(torch.float8_e4m3fnuz).max
+        res = float8_max_pos / torch.clamp(amax, min=EPS)
         res = res.to(torch.float32)
     else:
         raise ValueError(f"Unsupported float8_dtype: {float8_dtype}")
@@ -128,6 +132,8 @@ def to_fp8_saturated(x: torch.Tensor, float8_dtype: torch.dtype):
     """
     if float8_dtype in FP8_TYPES:
         max_value = torch.finfo(float8_dtype).max
+        if float8_dtype == torch.float8_e4m3fn and is_gaudi2():
+            max_value = torch.finfo(torch.float8_e4m3fnuz).max
         x = x.clamp(min=-max_value, max=max_value)
         return x.to(float8_dtype)
     else:
@@ -163,6 +169,8 @@ def fp8_tensor_statistics(
     """
     if float8_dtype in FP8_TYPES:
         FP8_MAX = torch.finfo(float8_dtype).max
+        if float8_dtype == torch.float8_e4m3fn and is_gaudi2():
+            FP8_MAX = torch.finfo(torch.float8_e4m3fnuz).max
     else:
         raise ValueError(f"Unsupported float8_dtype: {float8_dtype}")
     tensor_orig_type = tensor._data.to(dtype=tensor._orig_dtype)
