@@ -761,9 +761,26 @@ def is_gaudi2():
     return is_gaudi("GAUDI2")
 
 
-def is_gaudi2_at_least():
+def is_gaudi2_or_gaudi3():
     return is_gaudi(["GAUDI2", "GAUDI3"])
 
 
 def is_gaudi3():
     return is_gaudi("GAUDI3")
+
+
+def synchronize():
+    """
+    Invokes device specific synchronization.
+    """
+    device_type = get_device()
+    assert device_type != None
+
+    if device_type == "cuda":
+        torch.cuda.synchronize()
+    elif device_type == "mps":
+        torch.mps.synchronize()
+    elif device_type == "hpu":
+        torch.hpu.synchronize()
+    elif device_type == "cpu":
+        torch.cpu.synchronize()

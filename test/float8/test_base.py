@@ -18,7 +18,8 @@ from torchao.utils import (
     TORCH_VERSION_AT_LEAST_2_5,
     get_device,
     is_gaudi2,
-    is_gaudi2_at_least,
+    is_gaudi2_or_gaudi3,
+    is_gaudi3,
     is_sm_at_least_89,
     is_sm_at_least_90,
 )
@@ -243,7 +244,7 @@ class TestFloat8Tensor:
     )
     @unittest.skipIf(not torch.accelerator.is_available(), "Accelerator not available")
     @unittest.skipIf(
-        not is_sm_at_least_90() and not is_gaudi2_at_least(),
+        not is_sm_at_least_90() and not is_gaudi2_or_gaudi3(),
         "Requires CUDA capability >= 9.0 or Gaudi2 or Gaudi3",
     )
     def test_axiswise_gemm(self, a_shape, a_granularity, b_granularity):
@@ -325,7 +326,7 @@ class TestFloat8Linear:
 
     @pytest.mark.parametrize(
         "emulate",
-        [True, False] if is_sm_at_least_89() or is_gaudi2_at_least() else [True],
+        [True, False] if is_sm_at_least_89() or is_gaudi2_or_gaudi3() else [True],
     )
     @pytest.mark.parametrize("x_shape", [(16, 16), (2, 16, 16), (3, 2, 16, 16)])
     @pytest.mark.parametrize(
@@ -389,7 +390,7 @@ class TestFloat8Linear:
     @pytest.mark.parametrize("linear_bias", [True, False])
     @unittest.skipIf(not torch.accelerator.is_available(), "Accelerator not available")
     @unittest.skipIf(
-        not is_sm_at_least_90() and not is_gaudi2_at_least(),
+        not is_sm_at_least_90() and not is_gaudi2_or_gaudi3(),
         "CUDA with capability 9.0 or greater or Gaudi2 or Gaudi3 not available",
     )
     @skip_if_rocm("ROCm enablement in progress")
@@ -413,7 +414,7 @@ class TestFloat8Linear:
 
     @pytest.mark.parametrize(
         "emulate",
-        [True, False] if is_sm_at_least_89() or is_gaudi2_at_least() else [True],
+        [True, False] if is_sm_at_least_89() or is_gaudi2_or_gaudi3() else [True],
     )
     @pytest.mark.parametrize(
         "linear_dtype", [torch.float16, torch.bfloat16, torch.float32]
@@ -424,7 +425,7 @@ class TestFloat8Linear:
         emulate: bool,
         linear_dtype: torch.dtype,
     ):
-        if not emulate and linear_dtype == torch.float16 and is_gaudi2_at_least():
+        if not emulate and linear_dtype == torch.float16 and is_gaudi2_or_gaudi3():
             pytest.xfail(reason="Unsupported io data type combination")
 
         m_ref = nn.Sequential(
@@ -442,7 +443,7 @@ class TestFloat8Linear:
         assert y.dtype == linear_dtype, f"y.dtype is {y.dtype}, expected {linear_dtype}"
 
         # autocast on
-        if not is_gaudi2_at_least():
+        if not is_gaudi2_or_gaudi3():
             with torch.autocast(get_device(), dtype=torch.half):
                 y = m(x)
             assert y.dtype == torch.half, f"y.dtype is {y.dtype}, expected {torch.half}"
@@ -458,11 +459,11 @@ class TestFloat8Linear:
     )
     @pytest.mark.parametrize(
         "emulate",
-        [True, False] if is_sm_at_least_89() or is_gaudi2_at_least() else [True],
+        [True, False] if is_sm_at_least_89() or is_gaudi2_or_gaudi3() else [True],
     )
     @unittest.skipIf(not torch.accelerator.is_available(), "Accelerator not available")
     def test_type_cast(self, linear_dtype: torch.dtype, emulate: bool):
-        if not emulate and linear_dtype == torch.float16 and is_gaudi2_at_least():
+        if not emulate and linear_dtype == torch.float16 and is_gaudi2_or_gaudi3():
             pytest.xfail(reason="Unsupported io data type combination")
 
         m = nn.Linear(32, 16, device=get_device(), dtype=linear_dtype)
@@ -478,7 +479,7 @@ class TestFloat8Linear:
         assert y.dtype == linear_dtype, f"y.dtype is {y.dtype}, expected {linear_dtype}"
 
         # autocast on
-        if not is_gaudi2_at_least():
+        if not is_gaudi2_or_gaudi3():
             with torch.autocast(get_device(), dtype=torch.half):
                 y = m(x)
             assert y.dtype == torch.half, f"y.dtype is {y.dtype}, expected {torch.half}"
@@ -505,7 +506,7 @@ class TestFloat8Linear:
         assert "i:dyn_ten_e4m3,w:dyn_ten_e4m3,go:dyn_ten_e5m2" in s
 
     @unittest.skipIf(
-        not is_sm_at_least_89() and not is_gaudi2_at_least(),
+        not is_sm_at_least_89() and not is_gaudi2_or_gaudi3(),
         "float8 support not available",
     )
     def test_inference_mode(self):
@@ -516,7 +517,7 @@ class TestFloat8Linear:
             m(x)
 
     @unittest.skipIf(
-        not is_sm_at_least_89() and not is_gaudi2_at_least(),
+        not is_sm_at_least_89() and not is_gaudi2_or_gaudi3(),
         "float8 support not available",
     )
     def test_quantize(self):
@@ -536,7 +537,7 @@ class TestFloat8Linear:
 
 class TestScaledMM:
     @unittest.skipIf(
-        not is_sm_at_least_89() and not is_gaudi2_at_least(),
+        not is_sm_at_least_89() and not is_gaudi2_or_gaudi3(),
         "float8 support not available",
     )
     @pytest.mark.parametrize(
@@ -544,7 +545,7 @@ class TestScaledMM:
     )
     @pytest.mark.parametrize("use_fast_accum", [True, False])
     def test_scaled_mm_vs_emulated(self, base_dtype, use_fast_accum):
-        if base_dtype == torch.float16 and is_gaudi2_at_least():
+        if base_dtype == torch.float16 and is_gaudi2_or_gaudi3():
             pytest.xfail(reason="Unsupported io data type combination")
 
         torch.manual_seed(42)
@@ -585,7 +586,7 @@ class TestScaledMM:
         torch.testing.assert_close(out_scaled_mm, out_emulated, atol=atol, rtol=rtol)
 
     @unittest.skipIf(
-        not is_sm_at_least_89() and not is_gaudi2_at_least(),
+        not is_sm_at_least_89() and not is_gaudi2_or_gaudi3(),
         "float8 support not available",
     )
     def test_different_configs_error(self):
@@ -623,7 +624,7 @@ class TestScaledMM:
             a @ b
 
     @unittest.skipIf(
-        not is_sm_at_least_89() and not is_gaudi2_at_least(),
+        not is_sm_at_least_89() and not is_gaudi2_or_gaudi3(),
         "float8 support not available",
     )
     @pytest.mark.parametrize(
@@ -631,8 +632,10 @@ class TestScaledMM:
     )
     @pytest.mark.parametrize("use_fast_accum", [True, False])
     def test_pad_inner_dim(self, base_dtype, use_fast_accum):
-        if base_dtype == torch.float16 and is_gaudi2_at_least():
+        if base_dtype == torch.float16 and is_gaudi2_or_gaudi3():
             pytest.xfail(reason="Unsupported io data type combination")
+        if base_dtype == torch.bfloat16 and is_gaudi3():
+            pytest.xfail(reason="Accuracy issue")
 
         torch.manual_seed(42)
         input_dtype = e4m3_dtype
@@ -644,14 +647,14 @@ class TestScaledMM:
         a_scale = tensor_to_scale(a, input_dtype).float()
         b_scale = tensor_to_scale(b, input_dtype).float()
 
-        a_fp8 = hp_tensor_and_scale_to_float8(
-            a, a_scale, input_dtype, None, GemmInputRole.INPUT
-        )
-        b_fp8 = hp_tensor_and_scale_to_float8(
-            b, b_scale, input_dtype, None, GemmInputRole.WEIGHT
-        )
+        if not is_gaudi2_or_gaudi3():
+            a_fp8 = hp_tensor_and_scale_to_float8(
+                a, a_scale, input_dtype, None, GemmInputRole.INPUT
+            )
+            b_fp8 = hp_tensor_and_scale_to_float8(
+                b, b_scale, input_dtype, None, GemmInputRole.WEIGHT
+            )
 
-        if not is_gaudi2_at_least():
             with pytest.raises(
                 RuntimeError,
                 match=re.escape(

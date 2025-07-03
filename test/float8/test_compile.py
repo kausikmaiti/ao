@@ -15,7 +15,7 @@ from torchao.utils import (
     TORCH_VERSION_AT_LEAST_2_5,
     get_backend,
     get_device,
-    is_gaudi2_at_least,
+    is_gaudi2_or_gaudi3,
     is_sm_at_least_89,
     is_sm_at_least_90,
 )
@@ -164,7 +164,7 @@ def test_aot_eager(
 )
 @unittest.skipIf(not torch.accelerator.is_available(), "Accelerator not available")
 @unittest.skipIf(
-    not is_sm_at_least_89() and not is_gaudi2_at_least(),
+    not is_sm_at_least_89() and not is_gaudi2_or_gaudi3(),
     "float8 support not available",
 )
 @pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float32])
@@ -203,7 +203,7 @@ def test_torch_compile_backend_from_config_params(
     ],
 )
 @unittest.skipIf(
-    not is_sm_at_least_90() and not is_gaudi2_at_least(),
+    not is_sm_at_least_90() and not is_gaudi2_or_gaudi3(),
     "CUDA with capability 9.0 or greater or Gaudi2 or Gaudi3 not available",
 )
 def test_torch_compile_backend_from_recipe(recipe_name):
@@ -240,7 +240,7 @@ class TestGraphBreaks(DynamoTestCase):
     # TODO(future): figure out why the test below fails on CUDA capability 8.9
     @unittest.skipIf(not torch.accelerator.is_available(), "Accelerator not available")
     @unittest.skipIf(
-        not is_sm_at_least_90() and not is_gaudi2_at_least(),
+        not is_sm_at_least_90() and not is_gaudi2_or_gaudi3(),
         "CUDA with capability 9.0 or greater or Gaudi2 or Gaudi3 not available",
     )
     def test_float8_with_graph_break_in_the_middle(self):
@@ -257,7 +257,7 @@ class TestGraphBreaks(DynamoTestCase):
 
     @unittest.skipIf(not torch.accelerator.is_available(), "Accelerator not available")
     @unittest.skipIf(
-        not is_sm_at_least_89() and not is_gaudi2_at_least(),
+        not is_sm_at_least_89() and not is_gaudi2_or_gaudi3(),
         "float8 support not available",
     )
     def test_float8_graph_input(self):
@@ -282,7 +282,7 @@ class TestGraphBreaks(DynamoTestCase):
 
     @unittest.skipIf(not torch.accelerator.is_available(), "Accelerator not available")
     @unittest.skipIf(
-        not is_sm_at_least_89() and not is_gaudi2_at_least(),
+        not is_sm_at_least_89() and not is_gaudi2_or_gaudi3(),
         "float8 support not available",
     )
     def test_float8_graph_output(self):
@@ -329,7 +329,7 @@ class capture_stderr(list):
 
 
 @unittest.skipIf(
-    not is_sm_at_least_89() and not is_gaudi2_at_least(),
+    not is_sm_at_least_89() and not is_gaudi2_or_gaudi3(),
     "float8 support not available",
 )
 @pytest.mark.parametrize(

@@ -16,7 +16,13 @@ import os
 import pytest
 import torch
 
-from torchao.utils import TORCH_VERSION_AT_LEAST_2_5
+from torchao.utils import (
+    TORCH_VERSION_AT_LEAST_2_5,
+    get_backend,
+    get_device,
+    get_dist_backend,
+    synchronize,
+)
 
 if not TORCH_VERSION_AT_LEAST_2_5:
     pytest.skip("Unsupported PyTorch version", allow_module_level=True)
@@ -37,10 +43,14 @@ from torchao.testing.float8.dtensor_utils import ToyModel
 
 def setup_distributed():
     world_size = int(os.environ.get("WORLD_SIZE", -1))
+    rank = int(os.environ.get("RANK", -1))
+    torch.distributed.init_process_group(
+        backend=get_dist_backend(), rank=rank, world_size=world_size
+    )
 
     # https://pytorch.org/tutorials/recipes/distributed_device_mesh.html
     device_mesh = init_device_mesh(
-        "cuda",
+        get_device(),
         (world_size // 2, 2),
         mesh_dim_names=("dp", "tp"),
     )
@@ -76,7 +86,7 @@ def _test_fp8_mlp_tensor_parallelism_base(
     )
 
     if compile:
-        tp_model = torch.compile(tp_model)
+        tp_model = torch.compile(tp_model, backend=get_backend())
 
     # apply FSDP
     fsdp_config = {"mesh": mesh["dp"]}
@@ -87,7 +97,8 @@ def _test_fp8_mlp_tensor_parallelism_base(
 
     tp_out = tp_model(x_fp32_tp_input)
     tp_out.sum().backward()
-    torch.cuda.synchronize()
+
+    synchronize()
 
     # TODO(future PR): test numerics, and add more cases
 
@@ -101,7 +112,7 @@ def _test_fp8_mlp_tensor_parallelism_compile(mesh: DeviceMesh, size=16):
 
 
 if __name__ == "__main__":
-    # float8 only works on CUDA H100 so we only test cuda and we follow
+    # float8 only works on H100, Gaudi2, Gaudi3 so we only test them and we follow
     # other test files to not use TestCase but instead just add the test
     # cases in the main func.
     device_mesh = setup_distributed()
