@@ -89,7 +89,7 @@ def _test_compile_base(
     "scaling_type_grad_output",
     [ScalingType.DYNAMIC],
 )
-@pytest.mark.parametrize("emulate", [False, True] if is_sm_at_least_89() else [True])
+@pytest.mark.parametrize("emulate", [False, True] if is_sm_at_least_89()  or is_gaudi2_or_gaudi3() else [True])
 @pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float32])
 @unittest.skipIf(not torch.accelerator.is_available(), "Accelerator not available")
 def test_eager_only(
@@ -116,7 +116,7 @@ def test_eager_only(
 
 
 @pytest.mark.parametrize("fullgraph", [True])
-@pytest.mark.parametrize("emulate", [False, True] if is_sm_at_least_89() else [True])
+@pytest.mark.parametrize("emulate", [False, True] if is_sm_at_least_89() or is_gaudi2_or_gaudi3() else [True])
 @pytest.mark.parametrize("scaling_type_input", [ScalingType.DYNAMIC])
 @pytest.mark.parametrize(
     "scaling_type_weight",
